@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+    <meta charset="UTF-8">
+    <title>Data Selector Test</title>
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.1.1/css/bootstrap.min.css">
+</head>
+<body>
+
+<h1>Data Selector Test</h1>
+
+<pre><code id="output"></code></pre>
+
+<ul class="nav nav-pills" data-selector="test" data-multiple>
+    <li><a href="#" data-value="whoop">Whoop</a></li>
+    <li><a href="#" data-value="foo">Foo</a></li>
+    <li><a href="#" data-value="bar">Bar</a></li>
+</ul>
+
+<ul class="nav nav-pills" data-selector="test2" data-multiple>
+    <li><a href="#" data-value="baby">Yeah Baby</a></li>
+    <li><a href="#" data-value="whoop">WhoopWhoop</a></li>
+    <li><a href="#" data-value="foobar">FooBar</a></li>
+</ul>
+
+<ul class="nav nav-pills" data-selector="single">
+    <li><a href="#" data-value="opt1">opt1</a></li>
+    <li><a href="#" data-value="opt2">opt2</a></li>
+    <li><a href="#" data-value="opt3">opt3</a></li>
+</ul>
+
+<form class="" role="search">
+    <div class="form-group">
+        <input type="search" class="form-control" placeholder="Search mofo" id="searchme">
+    </div>
+</form>
+
+<hr>
+
+<div id="xhr-log"></div>
+
+<script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.0/jquery.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.1.1/js/bootstrap.min.js"></script>
+<script src="dataselector.jquery.js"></script>
+<script>
+
+    window.dsl = $('#output').dsLoader({
+        url: 'data.json',
+        type: 'get',
+        params: {limit: 4},
+        onSuccess: function(data, textStatus, jqXHR) {
+            $('#xhr-log').append($('<pre>').html(jqXHR.getAllResponseHeaders()));
+        },
+        objRenderer: function (obj) {
+            return 'Hallo ' + obj.name + '\n';
+        }
+    }).getLoader();
+
+    dsl.addSearch('#searchme');
+
+//    var t;
+//    $('#searchme').on('keyup', function (e) {
+//        if (t) clearTimeout(t);
+//        t = setTimeout(function () {
+//            dsl.setParam('search', $(e.target).val(), true);
+//        }, 200);
+//    });
+</script>
+</body>
+</html>
