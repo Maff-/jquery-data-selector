@@ -45,8 +45,10 @@
 <script>
 
     window.dsl = $('#output').dsLoader({
-        url: 'data.json',
-        type: 'get',
+        ajax: {
+            url: 'data.json',
+            type: 'get'
+        },
         params: {limit: 4},
         onSuccess: function(data, textStatus, jqXHR) {
             $('#xhr-log').append($('<pre>').html(jqXHR.getAllResponseHeaders()));

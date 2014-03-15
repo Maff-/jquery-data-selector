@@ -4,13 +4,33 @@
     <meta charset="UTF-8">
     <title>Data Selector Demo - Server-side</title>
     <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="//css-spinners.com/css/spinner/spinner.css" type="text/css">
     <style>
         #xhr-log {
             max-height: 400px;
             overflow-y: scroll;
         }
-        #output.loading {
-
+        #output {
+            position: relative;
+            min-height: 100px;
+        }
+        .dsl-overlay {
+            position: absolute;
+            top: 0; right: 0; bottom: 0; left: 0;
+            background-color: rgba(255, 255, 255, 0.80);
+            text-align: center;
+            display: none;
+        }
+        .loading > .dsl-overlay {
+            display: block;
+        }
+        .dsl-overlay > .spinner {
+            position: absolute;
+            top: 50%;
+            margin-top: -20px;
+        }
+        .dsl-pagination {
+            text-align: center;
         }
     </style>
 </head>
@@ -20,17 +40,6 @@
 <div class="container">
 
     <div class="selectors well">
-
-<!--        <ul class="nav nav-pills" data-selector="gender" data-multiple>
-            <li><a href="#" data-value="Male">Dudes</a></li>
-            <li><a href="#" data-value="Female">Dudettes</a></li>
-        </ul>
-
-        <ul class="nav nav-pills" data-selector="test2" data-multiple>
-            <li><a href="#" data-value="baby">Yeah Baby</a></li>
-            <li><a href="#" data-value="whoop">WhoopWhoop</a></li>
-            <li><a href="#" data-value="foobar">FooBar</a></li>
-        </ul>-->
 
         <div class="btn-toolbar" role="toolbar">
 
@@ -46,35 +55,12 @@
                 </label>
             </div>
 
-<!--            <div class="btn-group" data-toggle="buttons">
-                <label class="btn btn-default">
-                    <input type="checkbox"> Option 1
-                </label>
-                <label class="btn btn-default">
-                    <input type="checkbox"> Option 2
-                </label>
-                <label class="btn btn-default">
-                    <input type="checkbox"> Option 3
-                </label>
-            </div>
-
-
-            <div class="btn-group">
-
-            </div>
-            <div class="btn-group">
-                <button type="button" class="btn btn-default" data-value="male">Male</button>
-                <button type="button" class="btn btn-default" data-value="female">Female</button>
-                <button type="button" class="btn btn-default">Left</button>
-
-            </div>
-            <div class="btn-group">...</div>-->
         </div>
 
         <ul class="nav nav-pills" data-selector="limit">
             <li class="disabled"><a>Limit:</a></li>
             <li><a href="#" data-value="1">1</a></li>
-            <li><a href="#" data-value="5">5</a></li>
+            <li class="active"><a href="#" data-value="5">5</a></li>
             <li><a href="#" data-value="10">10</a></li>
             <li><a href="#" data-value="30">30</a></li>
         </ul>
@@ -97,6 +83,7 @@
 <script src="//cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.1.1/js/bootstrap.min.js"></script>
 <script src="//cdnjs.cloudflare.com/ajax/libs/hogan.js/3.0.0/hogan.js"></script>
 <script src="//cdnjs.cloudflare.com/ajax/libs/holder/2.3.1/holder.js"></script>
+<!--<script src="//cdnjs.cloudflare.com/ajax/libs/spin.js/1.3.3/spin.min.js"></script>-->
 <script src="../dataselector.jquery.js"></script>
 <script id="template" type="text/html">
 
@@ -118,7 +105,8 @@
     var dsl = $('#output').dsLoader({
         url: 'data.php',
         type: 'post',
-        params: {limit: 10},
+        limitParam: 'limit',
+        params: {limit: 5},
         onSuccess: function (data, textStatus, jqXHR) {
             $('#xhr-log').prepend($('<pre>').html(jqXHR.getAllResponseHeaders()).fadeIn());
         },
@@ -127,6 +115,9 @@
         },
         afterLoad: function () {
             Holder.run();
+        },
+        afterInit: function () {
+            $('.dsl-overlay').append($('<div class="spinner"></div>'));
         }
     }).getLoader();
 

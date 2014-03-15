@@ -8,16 +8,31 @@
         this.options = options;
         this.params = options.params || {};
 
-        this.init();
+        this.limit = this.params[this.options.limitParam] || 1;
+        this.start = this.params[this.options.startParam] || 0;
+        this.currentPage = (this.limit == 0) ? 1 : (this.start / this.limit) + 1;
+        this.pages = this.currentPage;
+        this.pageLength = this.limit;
+
+        this.contentElm = null;
+        this.paginationElm = null;
+
+        this.initContainers();
+        this.initListeners();
+
+        this.options.afterInit.call(elm);
     };
 
     DataSelectorLoader.DEFAULTS = {
-        namespace: 'wf.loader',
+        namespace: 'rb.loader',
         searchParam: 'search',
-        searchDelay: 250
+        searchDelay: 250,
+        contentContainerClass: 'dsl-content',
+        paginationContainerClass: 'dsl-pagination',
+        overlayClass: 'dsl-overlay'
     };
 
-    DataSelectorLoader.prototype.init = function () {
+    DataSelectorLoader.prototype.initListeners = function () {
         var dsl = this;
         var opts = this.options;
 
@@ -44,6 +59,59 @@
 
             dsl.setParam(name, value, state, multiple);
         });
+
+        if (this.paginationElm) {
+            $(this.paginationElm).on('click', 'a[data-start]', function(e) {
+                var link = $(e.target);
+                var start = link.data('start');
+                dsl.setParam(opts.startParam, start, true, false);
+                e.preventDefault();
+            });
+        }
+    };
+
+    DataSelectorLoader.prototype.initContainers = function () {
+//        var dsl = this;
+        var opts = this.options;
+
+        if (opts.contentContainer === false) {
+            this.contentElm = this.$element;
+        } else if (typeof opts.contentContainer == 'string') {
+            this.contentElm = $(opts.contentContainer);
+        } else if (opts.contentContainer instanceof $) {
+            this.contentElm = opts.contentContainer;
+        } else {
+            this.$element.empty();
+            this.contentElm = this.buildContentContainer();
+        }
+
+        if (opts.pagination) {
+            if (opts.paginationContainer === false) {
+                this.paginationElm = this.$element;
+            } else if (typeof opts.paginationContainer == 'string') {
+                this.paginationElm = $(opts.paginationContainer);
+            } else if (opts.paginationContainer instanceof $) {
+                this.paginationElm = opts.paginationContainer;
+            } else {
+                this.paginationElm = this.buildPaginationContainer();
+            }
+        }
+
+        if (this.contentElm != this.$element) {
+            this.buildOverlay();
+        }
+    };
+
+    DataSelectorLoader.prototype.buildPaginationContainer = function () {
+        return $('<div>').addClass(DataSelectorLoader.DEFAULTS.paginationContainerClass).appendTo(this.$element);
+    };
+
+    DataSelectorLoader.prototype.buildContentContainer = function () {
+        return $('<div>').addClass(DataSelectorLoader.DEFAULTS.contentContainerClass).appendTo(this.$element);
+    };
+
+    DataSelectorLoader.prototype.buildOverlay = function () {
+        return $('<div>').addClass(DataSelectorLoader.DEFAULTS.overlayClass).appendTo(this.$element);
     };
 
     DataSelectorLoader.prototype.addSearch = function (input, paramName, delay) {
@@ -85,11 +153,27 @@
             }
         }
 
+        this.limit = this.params[this.options.limitParam] || 1;
+        this.start = this.params[this.options.startParam] || 0;
+
         this.paramsUpdated();
     };
 
     DataSelectorLoader.prototype.paramsUpdated = function () {
         this.load();
+    };
+
+    DataSelectorLoader.prototype.nextPage = function () {
+        this.jumpPage(this.currentPage + 1);
+    };
+
+    DataSelectorLoader.prototype.prevPage = function () {
+        this.jumpPage(this.currentPage - 1);
+    };
+
+    DataSelectorLoader.prototype.jumpPage = function (page) {
+        var start = this.pageLength * (page - 1);
+        this.setParam(this.options.startParam, start, true, false);
     };
 
     DataSelectorLoader.prototype.load = function () {
@@ -100,41 +184,80 @@
         elm.addClass('loading');
         opts.beforeLoad.call(elm);
 
-        $.ajax({
-            type: opts.type,
-            url: opts.url,
+        var ajaxOpts = {
+            url: opts.url || undefined,
+            type: opts.type || undefined,
             data: dsl.params,
             success: function (data, textStatus, jqXHR) {
-
-                if (typeof data == 'object' && data[opts.dataIndex] !== undefined) {
-                    dsl.objResponseHandler(data[opts.dataIndex]);
-                } else {
-                    dsl.textResponseHandler(data);
-                }
-
-                opts.onSuccess.call(elm, data, textStatus, jqXHR);
+                dsl.responseHandler.call(dsl, data, textStatus, jqXHR);
             },
-            error: function (jqXHR, textStatus, errorThrown) {
+            error : function (jqXHR, textStatus, errorThrown) {
                 opts.onError.call(elm, jqXHR, textStatus, errorThrown);
             }
-        }).always(function () {
+        };
+
+        $.ajax($.extend(true, {}, ajaxOpts, opts.ajax))
+        .always(function () {
             elm.removeClass('loading');
             opts.afterLoad.call(elm);
         });
     };
 
+    DataSelectorLoader.prototype.responseHandler = function (data, textStatus, jqXHR) {
+        var dsl = this;
+        var opts = this.options;
+        var elm = this.$element;
+
+        if (typeof data == 'object' && data[opts.dataIndex] !== undefined) {
+            dsl.objResponseHandler(data[opts.dataIndex]);
+            dsl.updatePages(data);
+            if (opts.pagination) {
+                dsl.buildPagination();
+            }
+        } else {
+            dsl.textResponseHandler(data);
+        }
+
+        opts.onSuccess.call(elm, data, textStatus, jqXHR);
+    };
+
     DataSelectorLoader.prototype.objResponseHandler = function (data) {
         var dsl = this;
-        var elm = this.$element;
-        elm.empty();
+        var cElm = this.contentElm;
+
+        cElm.empty();
         $.each(data, function (i, obj) {
             var objHtml = dsl.objRenderer(obj);
-            elm.append(objHtml);
+            cElm.append(objHtml);
         });
     };
 
     DataSelectorLoader.prototype.textResponseHandler = function (data) {
-        this.$element.html(this.textRenderer(data));
+        this.contentElm.html(this.textRenderer(data));
+    };
+
+    DataSelectorLoader.prototype.updatePages = function (data) {
+        var opts = this.options;
+        if (data[opts.recordsCountIndex] == undefined) return;
+        var totalRecords = data[opts.recordsCountIndex];
+        this.pageLength = this.params[opts.limitParam] || data[opts.dataIndex].length;
+        this.pages = Math.ceil(totalRecords / this.pageLength);
+        this.currentPage = (this.start / this.pageLength) + 1;
+    };
+
+    DataSelectorLoader.prototype.buildPagination = function () {
+        var paginator = $('<ul>').addClass('pagination');
+        for (var i=0; i < this.pages; i++) {
+            var page = i+1;
+            var li = $('<li>');
+            if (page == this.currentPage) {
+                li.addClass('active');
+            }
+            var link = $('<a>').attr({href: '#', 'data-start': i * this.pageLength}).text(page);
+            li.append(link);
+            paginator.append(li);
+        }
+        this.paginationElm.html(paginator);
     };
 
     // the user should override this function, this is only a demo
@@ -154,7 +277,7 @@
 
         return this.each(function () {
             var $this = $(this);
-            var opts = $.extend({}, $.fn.dsLoader.defaults, options);
+            var opts = $.extend(true, {}, $.fn.dsLoader.defaults, options);
 
             var dsl = $this.data(DataSelectorLoader.DEFAULTS.namespace);
             if (!dsl) $this.data(DataSelectorLoader.DEFAULTS.namespace, (dsl = new DataSelectorLoader($this, opts)));
@@ -177,10 +300,19 @@
     };
 
     $.fn.dsLoader.defaults = {
-        url: undefined,
+        ajax: {
+            url: undefined,
+            type: 'post'
+        },
         deferLoad: false,
-        type: 'post',
+        pagination: true,
+
         dataIndex: 'data',
+        recordsCountIndex: 'recordsFiltered',
+
+        limitParam: 'length',
+        startParam: 'start',
+
         selectorSelector: '[data-selector]',
         selectorValueSelector: 'a[data-value]',
         contentContainer: undefined,
@@ -192,14 +324,11 @@
         textRenderer: undefined,
         paramsUpdated: undefined,
 
-        beforeLoad: function () {
-        },
-        afterLoad: function () {
-        },
-        onSuccess: function () {
-        },
-        onError: function () {
-        }
+        beforeLoad: function () {},
+        afterLoad: function () {},
+        afterInit: function () {},
+        onSuccess: function () {},
+        onError: function () {}
 
     };
 
