@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+    <meta charset="UTF-8">
+    <title>Data Selector Demo - Server-side</title>
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.1.1/css/bootstrap.min.css">
+    <style>
+        #xhr-log {
+            max-height: 400px;
+            overflow-y: scroll;
+        }
+        #output.loading {
+
+        }
+    </style>
+</head>
+<body>
+
+
+<div class="container">
+
+    <div class="selectors well">
+
+<!--        <ul class="nav nav-pills" data-selector="gender" data-multiple>
+            <li><a href="#" data-value="Male">Dudes</a></li>
+            <li><a href="#" data-value="Female">Dudettes</a></li>
+        </ul>
+
+        <ul class="nav nav-pills" data-selector="test2" data-multiple>
+            <li><a href="#" data-value="baby">Yeah Baby</a></li>
+            <li><a href="#" data-value="whoop">WhoopWhoop</a></li>
+            <li><a href="#" data-value="foobar">FooBar</a></li>
+        </ul>-->
+
+        <div class="btn-toolbar" role="toolbar">
+
+            <div class="btn-group" data-toggle="buttons" data-selector="gender">
+                <label class="btn btn-default">
+                    <input type="radio" name="gender" data-value="male"> Male
+                </label>
+                <label class="btn btn-default">
+                    <input type="radio" name="gender" data-value="female"> Female
+                </label>
+                <label class="btn btn-default active">
+                    <input type="radio" name="gender" data-value="" checked> Both
+                </label>
+            </div>
+
+<!--            <div class="btn-group" data-toggle="buttons">
+                <label class="btn btn-default">
+                    <input type="checkbox"> Option 1
+                </label>
+                <label class="btn btn-default">
+                    <input type="checkbox"> Option 2
+                </label>
+                <label class="btn btn-default">
+                    <input type="checkbox"> Option 3
+                </label>
+            </div>
+
+
+            <div class="btn-group">
+
+            </div>
+            <div class="btn-group">
+                <button type="button" class="btn btn-default" data-value="male">Male</button>
+                <button type="button" class="btn btn-default" data-value="female">Female</button>
+                <button type="button" class="btn btn-default">Left</button>
+
+            </div>
+            <div class="btn-group">...</div>-->
+        </div>
+
+        <ul class="nav nav-pills" data-selector="limit">
+            <li class="disabled"><a>Limit:</a></li>
+            <li><a href="#" data-value="1">1</a></li>
+            <li><a href="#" data-value="5">5</a></li>
+            <li><a href="#" data-value="10">10</a></li>
+            <li><a href="#" data-value="30">30</a></li>
+        </ul>
+    </div>
+
+</div>
+
+<div class="container">
+    <div id="output">loading...</div>
+</div>
+
+<hr>
+
+<div class="container">
+    <div id="xhr-log"></div>
+</div>
+
+
+<script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.0/jquery.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.1.1/js/bootstrap.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/hogan.js/3.0.0/hogan.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/holder/2.3.1/holder.js"></script>
+<script src="../dataselector.jquery.js"></script>
+<script id="template" type="text/html">
+
+    <div class="media" id="person-{{id}}" data-id="{{id}}">
+        <a class="pull-left" href="#">
+            <img data-src="{{picture}}" width="80" height="80">
+        </a>
+        <div class="media-body">
+            <h4 class="media-heading">{{name}} <span class="badge">{{balance}}</span></h4>
+            {{about}}
+        </div>
+    </div>
+
+</script>
+<script>
+
+    var template = Hogan.compile($('#template').text());
+
+    var dsl = $('#output').dsLoader({
+        url: 'data.php',
+        type: 'post',
+        params: {limit: 10},
+        onSuccess: function (data, textStatus, jqXHR) {
+            $('#xhr-log').prepend($('<pre>').html(jqXHR.getAllResponseHeaders()).fadeIn());
+        },
+        objRenderer: function (obj) {
+            return template.render(obj);
+        },
+        afterLoad: function () {
+            Holder.run();
+        }
+    }).getLoader();
+
+    $('[data-selector=gender]').find('input').on('change', function(e) {
+        var val = $(e.target).data('value');
+        dsl.setParam('gender', val, val != '', false);
+    });
+
+</script>
+
+</body>
+</html>
